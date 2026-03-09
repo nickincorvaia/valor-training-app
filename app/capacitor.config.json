@@ -1,5 +1,9 @@
 {
   "appId": "com.valor.training",
   "appName": "Valor Training",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "url": "https://nickincorvaia.github.io/valor-training-app/",
+    "cleartext": true
+  }
 }
