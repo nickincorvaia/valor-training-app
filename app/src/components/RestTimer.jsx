@@ -96,7 +96,7 @@ export default function RestTimer({ defaultSeconds = 90, onClose }) {
     return (
         <div className="timer-overlay">
             {/* Background image */}
-            <img src="timer-bg.png" alt="" className="timer-bg-image" />
+            <img src={`${import.meta.env.BASE_URL}timer-bg.png`} alt="" className="timer-bg-image" />
             <div className="timer-container animate-scale-in">
                 {/* Header */}
                 <div className="timer-header">

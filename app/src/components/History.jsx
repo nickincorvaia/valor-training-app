@@ -34,7 +34,7 @@ export default function History() {
                     <h1 className="page-title">Workout <span className="text-gradient">History</span></h1>
                 </div>
                 <div className="empty-state">
-                    <img src="fitness-icons.png" alt="Get started" style={{ width: '200px', height: 'auto', opacity: 0.7, marginBottom: 'var(--space-lg)' }} />
+                    <img src={`${import.meta.env.BASE_URL}fitness-icons.png`} alt="Get started" style={{ width: '200px', height: 'auto', opacity: 0.7, marginBottom: 'var(--space-lg)' }} />
                     <h3>No workouts yet</h3>
                     <p>Generated workouts will appear here. Go construct your first session!</p>
                 </div>
@@ -44,7 +44,7 @@ export default function History() {
 
     return (
         <div className="page">
-            <img src="hero-banner.png" alt="Your journey" className="hero-banner animate-fade-in" />
+            <img src={`${import.meta.env.BASE_URL}hero-banner.png`} alt="Your journey" className="hero-banner animate-fade-in" />
             <div className="page-header">
                 <h1 className="page-title">Workout <span className="text-gradient">History</span></h1>
                 <p className="page-subtitle">{history.length} session{history.length !== 1 ? 's' : ''} logged</p>

@@ -7,7 +7,7 @@ import BottomNav from './components/BottomNav';
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       {/* Ambient background effects */}
       <div className="app-bg" />
 

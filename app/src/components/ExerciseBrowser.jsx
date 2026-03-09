@@ -39,7 +39,7 @@ export default function ExerciseBrowser() {
     return (
         <div className="page">
             {/* Hero Banner */}
-            <img src="hero-banner.png" alt="Train with intensity" className="hero-banner animate-fade-in" />
+            <img src={`${import.meta.env.BASE_URL}hero-banner.png`} alt="Train with intensity" className="hero-banner animate-fade-in" />
 
             <div className="page-header">
                 <h1 className="page-title">Exercise <span className="text-gradient">Library</span></h1>
