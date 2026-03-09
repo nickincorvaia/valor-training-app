@@ -76,7 +76,7 @@ export default function Settings() {
         <div className="page">
             {/* Fitness Icons Banner */}
             <div style={{ textAlign: 'center', marginBottom: 'var(--space-md)' }}>
-                <img src="/fitness-icons.png" alt="Valor Training" style={{ width: '180px', height: 'auto', opacity: 0.8 }} className="animate-fade-in" />
+                <img src="fitness-icons.png" alt="Valor Training" style={{ width: '180px', height: 'auto', opacity: 0.8 }} className="animate-fade-in" />
             </div>
 
             <div className="page-header">

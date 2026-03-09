@@ -147,7 +147,7 @@ export default function WorkoutBuilder() {
             {/* Logo & Brand Header (on first step) */}
             {step === 0 && (
                 <div className="brand-header animate-fade-in">
-                    <img src="/logo.png" alt="Valor Training" className="brand-logo" />
+                    <img src="logo.png" alt="Valor Training" className="brand-logo" />
                 </div>
             )}
 
