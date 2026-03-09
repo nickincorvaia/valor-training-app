@@ -1124,11 +1124,11 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .brand-logo {
-  width: 120px;
-  height: 120px;
+  width: 200px;
+  height: 200px;
   object-fit: contain;
   border-radius: var(--radius-xl);
-  filter: drop-shadow(0 0 20px var(--accent-glow));
+  filter: drop-shadow(0 0 30px var(--accent-glow));
 }
 
 /* --- Rest Timer Overlay --- */
