@@ -1,6 +1,15 @@
-# 🦅 Valor Training App
+🦅 Valor Training App
+=====================
 
 **Valor Training** is a premium, AI-powered workout generator designed for a high-intensity, personalized fitness experience. Built with React, Vite, and Capacitor for a native Android feel.
+
+---
+
+### [📥 Download the latest APK (v1.0.0)](https://github.com/nickincorvaia/valor-training-app/releases/latest/download/app-debug.apk)
+
+*Install this APK once and the app will automatically update every time new code is pushed!*
+
+---
 
 ![Hero Banner](app/public/hero-banner.png)
 
@@ -11,6 +20,7 @@
 - **Interactive Workout Card**: Real-time progress tracking with checkboxes and a celebration state.
 - **Smart Rest Timer**: Integrated countdown timer with haptic feedback, audio cues, and goal-based defaults.
 - **Saved Preferences**: Remembers your settings for a frictionless experience.
+- **Live Updates**: The app automatically fetches the latest code from GitHub, so you don't need to reinstall.
 - **Premium Dark Aesthetic**: A cinematic, high-contrast design optimized for gym environments.
 
 ## 📱 Android Version
