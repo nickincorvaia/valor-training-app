@@ -93,6 +93,11 @@ export default function WorkoutCard({ workout, interactive = true }) {
                                         {ex.equipment !== 'None' ? ex.equipment : 'No equipment'} ·{' '}
                                         <span className={`type-badge ${ex.type.toLowerCase()}`}>{ex.type}</span>
                                     </div>
+                                    {ex.description && (
+                                        <div className="exercise-description" style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.4' }}>
+                                            {ex.description}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="exercise-stats">
                                     <div className="exercise-sets">{ex.sets} × {ex.reps}</div>

@@ -61,10 +61,6 @@ export default function WorkoutBuilder() {
             const result = generateWorkout(config);
             if (result) {
                 setWorkout(result);
-                const history = JSON.parse(localStorage.getItem('vigor_history') || '[]');
-                history.unshift(result);
-                if (history.length > 50) history.pop();
-                localStorage.setItem('vigor_history', JSON.stringify(history));
             }
         }
     };
@@ -113,6 +109,23 @@ export default function WorkoutBuilder() {
                     <Timer size={20} /> Start Rest Timer
                 </button>
 
+                {/* Complete Workout Button */}
+                <button
+                    className="btn btn-secondary btn-full btn-lg mt-sm"
+                    onClick={() => {
+                        const history = JSON.parse(localStorage.getItem('vigor_history') || '[]');
+                        const loggedWorkout = { ...workout, createdAt: new Date().toISOString() };
+                        history.unshift(loggedWorkout);
+                        if (history.length > 50) history.pop();
+                        localStorage.setItem('vigor_history', JSON.stringify(history));
+                        alert('Workout logged to history!');
+                        handleReset();
+                    }}
+                    style={{ marginTop: '12px' }}
+                >
+                    <Zap size={20} /> Complete & Log Workout
+                </button>
+
                 <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
                     <button className="btn btn-secondary btn-full" onClick={handleReset}>
                         New Workout
@@ -121,10 +134,6 @@ export default function WorkoutBuilder() {
                         const result = generateWorkout(config);
                         if (result) {
                             setWorkout(result);
-                            const history = JSON.parse(localStorage.getItem('vigor_history') || '[]');
-                            history.unshift(result);
-                            if (history.length > 50) history.pop();
-                            localStorage.setItem('vigor_history', JSON.stringify(history));
                         }
                     }}>
                         <Zap size={18} /> Regenerate
