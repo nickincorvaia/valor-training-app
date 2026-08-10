@@ -1,22 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { BODY_PARTS, GOALS, FITNESS_LEVELS } from '../data/exercises';
 import { generateWorkout } from '../engine/workoutEngine';
+import { readHistory, writeHistory, pruneProgress } from '../utils/backup';
+import { loadPrefs } from '../utils/prefs';
 import WorkoutCard from './WorkoutCard';
 import RestTimer from './RestTimer';
+import PlateCalculator from './PlateCalculator';
 import {
     Dumbbell, Home, Building2, TrendingUp, TrendingDown,
-    ChevronRight, Zap, Sparkles, Timer
+    ChevronRight, Zap, Sparkles, Timer, Calculator
 } from 'lucide-react';
 
 const STEPS = ['location', 'goal', 'bodyParts', 'level', 'duration'];
-
-function loadPrefs() {
-    try {
-        const stored = localStorage.getItem('valor_prefs');
-        if (stored) return JSON.parse(stored);
-    } catch (e) { /* */ }
-    return null;
-}
 
 export default function WorkoutBuilder() {
     const prefs = loadPrefs();
@@ -31,12 +26,14 @@ export default function WorkoutBuilder() {
     });
     const [workout, setWorkout] = useState(null);
     const [showTimer, setShowTimer] = useState(false);
+    const [showPlates, setShowPlates] = useState(false);
 
     const currentStep = STEPS[step];
 
     const restTimerSeconds = (() => {
+        // The engine already scaled rest by fitness level — prefer its number.
+        if (workout?.restSeconds) return workout.restSeconds;
         if (workout) {
-            // Get rest from goal config
             const goalConfig = GOALS[config.goal];
             return goalConfig?.restSeconds || prefs?.restTimerSeconds || 90;
         }
@@ -100,7 +97,7 @@ export default function WorkoutBuilder() {
                     <WorkoutCard workout={workout} />
                 </div>
 
-                {/* Timer Button */}
+                {/* Timer + Plate Calculator */}
                 <button
                     className="btn btn-primary btn-full btn-lg mt-md"
                     onClick={() => setShowTimer(true)}
@@ -109,15 +106,23 @@ export default function WorkoutBuilder() {
                     <Timer size={20} /> Start Rest Timer
                 </button>
 
+                <button
+                    className="btn btn-secondary btn-full mt-sm"
+                    onClick={() => setShowPlates(true)}
+                >
+                    <Calculator size={18} /> Plate Calculator
+                </button>
+
                 {/* Complete Workout Button */}
                 <button
                     className="btn btn-secondary btn-full btn-lg mt-sm"
                     onClick={() => {
-                        const history = JSON.parse(localStorage.getItem('vigor_history') || '[]');
+                        const history = readHistory();
                         const loggedWorkout = { ...workout, createdAt: new Date().toISOString() };
                         history.unshift(loggedWorkout);
                         if (history.length > 50) history.pop();
-                        localStorage.setItem('vigor_history', JSON.stringify(history));
+                        writeHistory(history);
+                        pruneProgress(history.map(w => w.id));
                         alert('Workout logged to history!');
                         handleReset();
                     }}
@@ -145,6 +150,14 @@ export default function WorkoutBuilder() {
                     <RestTimer
                         defaultSeconds={restTimerSeconds}
                         onClose={() => setShowTimer(false)}
+                    />
+                )}
+
+                {/* Plate Calculator Overlay */}
+                {showPlates && (
+                    <PlateCalculator
+                        unit={prefs?.weightUnit || 'lb'}
+                        onClose={() => setShowPlates(false)}
                     />
                 )}
             </div>
@@ -272,7 +285,7 @@ export default function WorkoutBuilder() {
                                     </div>
                                     <div className="option-text">
                                         <h4>{val.label}</h4>
-                                        <p>Volume coefficient: {val.coefficient}×</p>
+                                        <p>{val.description}</p>
                                     </div>
                                 </div>
                             ))}

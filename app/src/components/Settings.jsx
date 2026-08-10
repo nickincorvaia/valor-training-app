@@ -1,51 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { BODY_PARTS, FITNESS_LEVELS } from '../data/exercises';
 import {
     Save, RotateCcw, Home, Building2, TrendingUp, TrendingDown,
-    Dumbbell, Clock, Volume2, VolumeX, Trash2, CheckCircle
+    Dumbbell, Volume2, VolumeX, Trash2, CheckCircle,
+    Download, Upload, Copy, AlertCircle
 } from 'lucide-react';
-
-const DEFAULT_PREFS = {
-    location: null,
-    goal: null,
-    level: null,
-    duration: 45,
-    favoriteBodyParts: [],
-    restTimerSeconds: 90,
-    soundEnabled: true,
-};
-
-function loadPrefs() {
-    try {
-        const stored = localStorage.getItem('valor_prefs');
-        if (stored) return { ...DEFAULT_PREFS, ...JSON.parse(stored) };
-    } catch (e) { /* */ }
-    return { ...DEFAULT_PREFS };
-}
-
-function savePrefs(prefs) {
-    localStorage.setItem('valor_prefs', JSON.stringify(prefs));
-    // Also sync sound pref
-    localStorage.setItem('valor_sound', String(prefs.soundEnabled));
-}
-
-export function usePreferences() {
-    const [prefs, setPrefs] = useState(loadPrefs);
-
-    const updatePrefs = (updates) => {
-        setPrefs(prev => {
-            const next = { ...prev, ...updates };
-            savePrefs(next);
-            return next;
-        });
-    };
-
-    return [prefs, updatePrefs];
-}
+import {
+    buildBackup, backupFilename, downloadBackup, copyBackupToClipboard,
+    parseBackup, mergeHistory, readHistory, writeHistory, pruneProgress,
+} from '../utils/backup';
+import { DEFAULT_PREFS, savePrefs, usePreferences } from '../utils/prefs';
 
 export default function Settings() {
     const [prefs, updatePrefs] = usePreferences();
     const [saved, setSaved] = useState(false);
+    const [notice, setNotice] = useState(null); // { kind: 'ok' | 'error', text }
+    const fileInputRef = useRef(null);
+
+    const flash = (kind, text) => {
+        setNotice({ kind, text });
+        setTimeout(() => setNotice(null), 5000);
+    };
 
     const handleSave = () => {
         savePrefs(prefs);
@@ -58,9 +33,68 @@ export default function Settings() {
     };
 
     const handleClearHistory = () => {
-        if (confirm('Clear all workout history? This cannot be undone.')) {
+        if (confirm('Clear all workout history? This cannot be undone.\n\nExport a backup first if you want to keep it.')) {
             localStorage.removeItem('vigor_history');
+            pruneProgress([]);
+            flash('ok', 'Workout history cleared.');
         }
+    };
+
+    const handleExport = () => {
+        const payload = buildBackup();
+        if (payload.history.length === 0) {
+            flash('error', 'No workouts to export yet.');
+            return;
+        }
+        const ok = downloadBackup(payload, backupFilename());
+        flash(
+            ok ? 'ok' : 'error',
+            ok
+                ? `Exported ${payload.history.length} workout${payload.history.length === 1 ? '' : 's'}.`
+                : "Download blocked — use \"Copy backup\" instead."
+        );
+    };
+
+    const handleCopy = async () => {
+        const payload = buildBackup();
+        if (payload.history.length === 0) {
+            flash('error', 'No workouts to copy yet.');
+            return;
+        }
+        const ok = await copyBackupToClipboard(payload);
+        flash(
+            ok ? 'ok' : 'error',
+            ok ? 'Backup JSON copied to clipboard.' : 'Could not access the clipboard.'
+        );
+    };
+
+    const handleImportFile = async (event) => {
+        const file = event.target.files?.[0];
+        // Reset immediately so re-picking the same file still fires onChange.
+        event.target.value = '';
+        if (!file) return;
+
+        let text;
+        try {
+            text = await file.text();
+        } catch {
+            flash('error', "Couldn't read that file.");
+            return;
+        }
+
+        const parsed = parseBackup(text);
+        if (!parsed.ok) {
+            flash('error', parsed.error);
+            return;
+        }
+
+        const { merged, added, duplicates } = mergeHistory(readHistory(), parsed.workouts);
+        writeHistory(merged);
+
+        const parts = [`Imported ${added} workout${added === 1 ? '' : 's'}`];
+        if (duplicates > 0) parts.push(`${duplicates} already present`);
+        if (parsed.skipped > 0) parts.push(`${parsed.skipped} unreadable entry skipped`);
+        flash('ok', `${parts.join(' · ')}.`);
     };
 
     const toggleFavBodyPart = (part) => {
@@ -162,7 +196,7 @@ export default function Settings() {
                             </div>
                             <div className="option-text">
                                 <h4>{val.label}</h4>
-                                <p>Coefficient: {val.coefficient}×</p>
+                                <p>{val.description}</p>
                             </div>
                         </div>
                     ))}
@@ -235,6 +269,68 @@ export default function Settings() {
                         <p>Beep countdown at 3, 2, 1</p>
                     </div>
                 </div>
+            </div>
+
+            {/* Weight Unit — used by the plate calculator */}
+            <div className="form-group">
+                <label className="form-label">Weight Unit</label>
+                <div className="chip-group">
+                    {['lb', 'kg'].map(u => (
+                        <div
+                            key={u}
+                            className={`chip ${(prefs.weightUnit || 'lb') === u ? 'active' : ''}`}
+                            onClick={() => updatePrefs({ weightUnit: u })}
+                        >
+                            {u.toUpperCase()}
+                        </div>
+                    ))}
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 'var(--space-xs)' }}>
+                    Sets the default for the plate calculator
+                </p>
+            </div>
+
+            {/* Backup & Restore */}
+            <div className="form-group">
+                <label className="form-label">Backup &amp; Restore</label>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: 'var(--space-sm)' }}>
+                    History lives only on this device — clearing app data erases it for good.
+                    Export a copy you can restore later or move to a new phone.
+                </p>
+
+                {notice && (
+                    <div
+                        className={`backup-notice ${notice.kind === 'error' ? 'backup-notice-error' : ''}`}
+                    >
+                        {notice.kind === 'error' ? <AlertCircle size={15} /> : <CheckCircle size={15} />}
+                        <span>{notice.text}</span>
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+                    <button className="btn btn-secondary btn-full" onClick={handleExport}>
+                        <Download size={16} /> Export History
+                    </button>
+                    <button className="btn btn-secondary btn-full" onClick={handleCopy}>
+                        <Copy size={16} /> Copy Backup to Clipboard
+                    </button>
+                    <button
+                        className="btn btn-secondary btn-full"
+                        onClick={() => fileInputRef.current?.click()}
+                    >
+                        <Upload size={16} /> Import History
+                    </button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="application/json,.json"
+                        onChange={handleImportFile}
+                        style={{ display: 'none' }}
+                    />
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 'var(--space-xs)' }}>
+                    Importing merges with what's already here — nothing is overwritten.
+                </p>
             </div>
 
             {/* Actions */}

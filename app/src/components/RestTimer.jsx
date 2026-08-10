@@ -31,7 +31,7 @@ export default function RestTimer({ defaultSeconds = 90, onClose }) {
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + 0.5);
-        } catch (e) {
+        } catch {
             // Audio not available
         }
     }, [soundEnabled]);
