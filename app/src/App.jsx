@@ -4,12 +4,16 @@ import History from './components/History';
 import ExerciseBrowser from './components/ExerciseBrowser';
 import Settings from './components/Settings';
 import BottomNav from './components/BottomNav';
+import UpdateBanner from './components/UpdateBanner';
 
 export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       {/* Ambient background effects */}
       <div className="app-bg" />
+
+      {/* Shown when a newer deploy is cached and waiting */}
+      <UpdateBanner />
 
       {/* Page Content */}
       <Routes>

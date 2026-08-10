@@ -354,6 +354,10 @@ export default function Settings() {
                     <Trash2 size={16} /> Clear History &amp; Weight Logs
                 </button>
             </div>
+
+            <p className="build-stamp">
+                Valor Training · build {typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : 'dev'}
+            </p>
         </div>
     );
 }
