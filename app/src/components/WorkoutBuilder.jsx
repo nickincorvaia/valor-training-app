@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { BODY_PARTS, GOALS, FITNESS_LEVELS } from '../data/exercises';
 import { generateWorkout } from '../engine/workoutEngine';
-import { readHistory, writeHistory, pruneProgress } from '../utils/backup';
+import { readHistory, writeHistory } from '../utils/backup';
+import { loadSession, commitWorkoutLogs, pruneSessions } from '../utils/logs';
 import { loadPrefs } from '../utils/prefs';
 import WorkoutCard from './WorkoutCard';
 import RestTimer from './RestTimer';
@@ -122,8 +123,22 @@ export default function WorkoutBuilder() {
                         history.unshift(loggedWorkout);
                         if (history.length > 50) history.pop();
                         writeHistory(history);
-                        pruneProgress(history.map(w => w.id));
-                        alert('Workout logged to history!');
+
+                        // Commit whatever sets were filled in to the per-exercise index,
+                        // so the next session can show "last time" for these movements.
+                        const session = loadSession(workout.id, workout.exercises);
+                        const logged = commitWorkoutLogs(
+                            loggedWorkout,
+                            session,
+                            prefs?.weightUnit || 'lb'
+                        );
+                        pruneSessions(history.map(w => w.id));
+
+                        alert(
+                            logged > 0
+                                ? `Workout logged — ${logged} exercise${logged === 1 ? '' : 's'} recorded to your training history.`
+                                : 'Workout logged to history! Tip: tap an exercise next time to record your weights.'
+                        );
                         handleReset();
                     }}
                     style={{ marginTop: '12px' }}

@@ -2,10 +2,13 @@
 // localStorage is the only store this app has, and clearing the browser/WebView
 // cache wipes it permanently — these helpers give the user a portable copy.
 
+import { LOGS_KEY, readLogs, writeLogs } from './logs';
+
 const HISTORY_KEY = 'vigor_history';
 const PREFS_KEY = 'valor_prefs';
 export const BACKUP_FORMAT = 'valor-training-backup';
-export const BACKUP_VERSION = 1;
+// v2 adds `logs` — the per-exercise weight/rep record.
+export const BACKUP_VERSION = 2;
 
 export function readHistory() {
     try {
@@ -38,6 +41,7 @@ export function buildBackup() {
         exportedAt: new Date().toISOString(),
         history: readHistory(),
         preferences: readPrefs(),
+        logs: readLogs(),
     };
 }
 
@@ -96,7 +100,39 @@ export function parseBackup(raw) {
         workouts,
         skipped: history.length - workouts.length,
         preferences: Array.isArray(data) ? null : data.preferences ?? null,
+        // v1 backups predate weight logging and simply have none.
+        logs: Array.isArray(data) ? null : data.logs ?? null,
     };
+}
+
+/**
+ * Merges imported weight logs into the local index, de-duplicating by the
+ * workout an entry came from. Returns how many entries were newly added.
+ */
+export function mergeLogs(incoming) {
+    if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) return 0;
+
+    const existing = readLogs();
+    let added = 0;
+
+    for (const [name, entries] of Object.entries(incoming)) {
+        if (!Array.isArray(entries)) continue;
+        const current = existing[name] || [];
+        const seen = new Set(current.map(e => e.workoutId));
+
+        for (const entry of entries) {
+            if (!entry || !Array.isArray(entry.sets) || seen.has(entry.workoutId)) continue;
+            current.push(entry);
+            seen.add(entry.workoutId);
+            added++;
+        }
+
+        current.sort((a, b) => new Date(b.date) - new Date(a.date));
+        existing[name] = current;
+    }
+
+    if (added > 0) writeLogs(existing);
+    return added;
 }
 
 /**
@@ -117,20 +153,11 @@ export function mergeHistory(existing, incoming) {
 }
 
 /**
- * Drops per-workout progress entries whose workout is no longer in history,
- * so localStorage doesn't grow without bound.
+ * Wipes the weight-log index. Paired with clearing history so the two stores
+ * can't drift apart.
  */
-export function pruneProgress(validIds) {
-    const keep = new Set(validIds);
-    const stale = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('valor_progress_') && !keep.has(key.slice('valor_progress_'.length))) {
-            stale.push(key);
-        }
-    }
-    stale.forEach(key => localStorage.removeItem(key));
-    return stale.length;
+export function clearLogs() {
+    localStorage.removeItem(LOGS_KEY);
 }
 
 /**

@@ -1496,3 +1496,164 @@ input[type="range"]::-moz-range-thumb {
 .plate-hint-warn {
   color: var(--warning);
 }
+
+/* ====================================================
+   Set Logging — record weight and reps per set
+   ==================================================== */
+.log-hint {
+  padding: 0 var(--space-md);
+  margin-top: var(--space-sm);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.exercise-entry {
+  position: relative;
+}
+
+.exercise-chevron {
+  color: var(--text-muted);
+  margin-top: 4px;
+  transition: transform 0.2s ease;
+}
+
+.exercise-chevron.open {
+  transform: rotate(180deg);
+  color: var(--accent-primary);
+}
+
+.last-time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-accent);
+}
+
+.last-time svg {
+  flex-shrink: 0;
+}
+
+.logged-summary {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.logged-summary svg {
+  flex-shrink: 0;
+}
+
+/* --- The expandable panel --- */
+.set-log {
+  margin: 0 var(--space-md) var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+}
+
+.set-log-head,
+.set-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 1fr 40px;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.set-log-head {
+  padding: 0 2px var(--space-xs);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.set-row + .set-row {
+  margin-top: 6px;
+}
+
+.set-num {
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.set-input {
+  width: 100%;
+  padding: 9px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: center;
+  font-family: inherit;
+  /* 16px minimum avoids iOS auto-zoom on focus */
+  min-height: 40px;
+}
+
+.set-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.set-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Strip the spinner arrows — they're unusable at thumb size */
+.set-input::-webkit-outer-spin-button,
+.set-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.set-input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.set-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--surface-border-hover);
+  background: var(--bg-card);
+  /* Faint tick reads as "tap to complete" — an empty box gives no affordance */
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.set-check:hover {
+  border-color: var(--accent-primary);
+}
+
+.set-check.checked {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+
+.set-row-done .set-input {
+  border-color: rgba(34, 197, 94, 0.35);
+  color: var(--text-secondary);
+}

@@ -54,7 +54,9 @@ export default function History() {
                 <div key={workout.id} className={`animate-fade-in stagger-${Math.min(i + 1, 5)}`}>
                     {expandedId === workout.id ? (
                         <div style={{ marginBottom: 'var(--space-md)' }}>
-                            <WorkoutCard workout={workout} />
+                            {/* History is a record, not a workspace — show what was
+                                logged rather than offering editable inputs. */}
+                            <WorkoutCard workout={workout} interactive={false} />
                             <button
                                 className="btn btn-ghost btn-full mt-sm"
                                 onClick={() => setExpandedId(null)}

@@ -7,8 +7,9 @@ import {
 } from 'lucide-react';
 import {
     buildBackup, backupFilename, downloadBackup, copyBackupToClipboard,
-    parseBackup, mergeHistory, readHistory, writeHistory, pruneProgress,
+    parseBackup, mergeHistory, readHistory, writeHistory, mergeLogs, clearLogs,
 } from '../utils/backup';
+import { pruneSessions } from '../utils/logs';
 import { DEFAULT_PREFS, savePrefs, usePreferences } from '../utils/prefs';
 
 export default function Settings() {
@@ -35,8 +36,9 @@ export default function Settings() {
     const handleClearHistory = () => {
         if (confirm('Clear all workout history? This cannot be undone.\n\nExport a backup first if you want to keep it.')) {
             localStorage.removeItem('vigor_history');
-            pruneProgress([]);
-            flash('ok', 'Workout history cleared.');
+            clearLogs();
+            pruneSessions([]);
+            flash('ok', 'Workout history and weight logs cleared.');
         }
     };
 
@@ -90,8 +92,10 @@ export default function Settings() {
 
         const { merged, added, duplicates } = mergeHistory(readHistory(), parsed.workouts);
         writeHistory(merged);
+        const loggedSets = mergeLogs(parsed.logs);
 
         const parts = [`Imported ${added} workout${added === 1 ? '' : 's'}`];
+        if (loggedSets > 0) parts.push(`${loggedSets} weight log${loggedSets === 1 ? '' : 's'}`);
         if (duplicates > 0) parts.push(`${duplicates} already present`);
         if (parsed.skipped > 0) parts.push(`${parsed.skipped} unreadable entry skipped`);
         flash('ok', `${parts.join(' · ')}.`);
@@ -294,8 +298,9 @@ export default function Settings() {
             <div className="form-group">
                 <label className="form-label">Backup &amp; Restore</label>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: 'var(--space-sm)' }}>
-                    History lives only on this device — clearing app data erases it for good.
-                    Export a copy you can restore later or move to a new phone.
+                    Your history and every weight you've logged live only on this device —
+                    clearing app data erases them for good. Export a copy you can restore
+                    later or move to a new phone.
                 </p>
 
                 {notice && (
@@ -346,7 +351,7 @@ export default function Settings() {
                     onClick={handleClearHistory}
                     style={{ color: 'var(--error)' }}
                 >
-                    <Trash2 size={16} /> Clear Workout History
+                    <Trash2 size={16} /> Clear History &amp; Weight Logs
                 </button>
             </div>
         </div>

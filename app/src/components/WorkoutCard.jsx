@@ -1,57 +1,94 @@
-import { useState, useEffect } from 'react';
-import { Lightbulb, Clock, Check, Trophy, Timer, AlertCircle } from 'lucide-react';
-
-const progressKey = (id) => `valor_progress_${id}`;
-
-function loadProgress(id) {
-    if (!id) return new Set();
-    try {
-        const stored = JSON.parse(localStorage.getItem(progressKey(id)) || '[]');
-        return new Set(Array.isArray(stored) ? stored : []);
-    } catch {
-        return new Set();
-    }
-}
+import { useState, useEffect, useMemo } from 'react';
+import {
+    Lightbulb, Clock, Check, Trophy, Timer, AlertCircle, ChevronDown, History as HistoryIcon,
+} from 'lucide-react';
+import {
+    loadSession, saveSession, readLogs, getLastEntry, formatEntry,
+    isBodyweight, isTimeBased,
+} from '../utils/logs';
+import { loadPrefs } from '../utils/prefs';
 
 export default function WorkoutCard({ workout, interactive = true }) {
     // Hooks must run on every render — the early return lives below them, or React
     // throws "Rendered more hooks than during the previous render" the moment a
     // null workout becomes a real one.
     const workoutId = workout?.id ?? null;
-    const [completed, setCompleted] = useState(() => loadProgress(workoutId));
+    const exercises = useMemo(() => workout?.exercises ?? [], [workout]);
 
-    // Reload progress when a different workout is shown in the same card slot.
-    useEffect(() => {
-        setCompleted(loadProgress(workoutId));
-    }, [workoutId]);
+    const [session, setSession] = useState(() => loadSession(workoutId, exercises));
+    const [expanded, setExpanded] = useState(null);
+    const [shownWorkoutId, setShownWorkoutId] = useState(workoutId);
+    const unit = useMemo(() => loadPrefs().weightUnit || 'lb', []);
 
-    // Persist so navigating to the timer and back doesn't wipe mid-workout progress.
+    // Read the log index once per card rather than per row, refreshed whenever
+    // a new workout appears (a commit may have landed since the last read).
+    const [logs, setLogs] = useState(() => readLogs());
+
+    // Reload when a different workout lands in the same card slot. Adjusting
+    // state during render is React's recommended alternative to a reset effect.
+    if (shownWorkoutId !== workoutId) {
+        setShownWorkoutId(workoutId);
+        setSession(loadSession(workoutId, exercises));
+        setLogs(readLogs());
+        setExpanded(null);
+    }
+
+    // Persist so navigating to the timer and back doesn't wipe mid-workout entries.
     useEffect(() => {
         if (!workoutId || !interactive) return;
-        localStorage.setItem(progressKey(workoutId), JSON.stringify([...completed]));
-    }, [completed, workoutId, interactive]);
+        saveSession(workoutId, session);
+    }, [session, workoutId, interactive]);
 
     if (!workout) return null;
 
-    const { header, exercises, restPeriod, insight, estimatedMinutes, totalSets } = workout;
+    const { header, restPeriod, insight, estimatedMinutes, totalSets } = workout;
 
-    const toggleExercise = (index) => {
-        if (!interactive) return;
-        setCompleted(prev => {
-            const next = new Set(prev);
-            if (next.has(index)) {
-                next.delete(index);
-            } else {
-                next.add(index);
-            }
+    const setsOf = (i) => session[i]?.sets ?? [];
+    const isExerciseDone = (i) => {
+        const sets = setsOf(i);
+        return sets.length > 0 && sets.every(s => s.done);
+    };
+
+    const updateSet = (exIndex, setIndex, patch) => {
+        setSession(prev => {
+            const next = { ...prev };
+            const entry = next[exIndex] ?? { sets: [] };
+            const sets = entry.sets.map((s, i) => (i === setIndex ? { ...s, ...patch } : s));
+            next[exIndex] = { ...entry, sets };
             return next;
         });
     };
 
+    const toggleSetDone = (exIndex, setIndex) => {
+        setSession(prev => {
+            const next = { ...prev };
+            const entry = next[exIndex] ?? { sets: [] };
+            const sets = entry.sets.map(s => ({ ...s }));
+            const target = sets[setIndex];
+            if (!target) return prev;
+
+            target.done = !target.done;
+
+            // Completing a set pre-fills the next one — a straight-across session
+            // becomes one tap per set instead of retyping the same numbers.
+            if (target.done) {
+                const nextSet = sets[setIndex + 1];
+                if (nextSet && !nextSet.done && nextSet.weight === '' && nextSet.reps === '') {
+                    nextSet.weight = target.weight;
+                    nextSet.reps = target.reps;
+                }
+            }
+
+            next[exIndex] = { ...entry, sets };
+            return next;
+        });
+    };
+
+    const completedCount = exercises.reduce((n, _, i) => n + (isExerciseDone(i) ? 1 : 0), 0);
     const progress = exercises.length > 0
-        ? Math.round((completed.size / exercises.length) * 100)
+        ? Math.round((completedCount / exercises.length) * 100)
         : 0;
-    const allDone = completed.size === exercises.length && exercises.length > 0;
+    const allDone = completedCount === exercises.length && exercises.length > 0;
 
     // Requested minutes, for flagging a session the exercise pool couldn't fill.
     const requestedMinutes = parseInt(header.duration, 10);
@@ -75,39 +112,119 @@ export default function WorkoutCard({ workout, interactive = true }) {
 
     let lastType = null;
 
-    const renderRow = (ex, i) => {
-        const isDone = completed.has(i);
+    const renderSetLogger = (ex, exIndex) => {
+        const sets = setsOf(exIndex);
+        const bodyweight = isBodyweight(ex);
+        const timeBased = isTimeBased(ex);
+
         return (
-            <div
-                key={i}
-                className={`exercise-row animate-fade-in stagger-${Math.min(i + 1, 5)} ${isDone ? 'exercise-done' : ''}`}
-                onClick={() => toggleExercise(i)}
-                style={{ cursor: interactive ? 'pointer' : 'default' }}
-            >
-                {interactive && (
-                    <div className={`exercise-checkbox ${isDone ? 'checked' : ''}`}>
-                        {isDone && <Check size={14} strokeWidth={3} />}
+            <div className="set-log">
+                <div className="set-log-head">
+                    <span>Set</span>
+                    <span>{bodyweight ? `Added (${unit})` : `Weight (${unit})`}</span>
+                    <span>{timeBased ? 'Secs' : 'Reps'}</span>
+                    <span />
+                </div>
+
+                {sets.map((set, setIndex) => (
+                    <div key={setIndex} className={`set-row ${set.done ? 'set-row-done' : ''}`}>
+                        <span className="set-num">{setIndex + 1}</span>
+                        <input
+                            className="set-input"
+                            type="number"
+                            inputMode="decimal"
+                            min="0"
+                            step="0.5"
+                            placeholder={bodyweight ? 'BW' : '—'}
+                            value={set.weight}
+                            onChange={(e) => updateSet(exIndex, setIndex, { weight: e.target.value })}
+                            aria-label={`Set ${setIndex + 1} weight`}
+                        />
+                        <input
+                            className="set-input"
+                            type="number"
+                            inputMode="numeric"
+                            min="0"
+                            placeholder={ex.reps}
+                            value={set.reps}
+                            onChange={(e) => updateSet(exIndex, setIndex, { reps: e.target.value })}
+                            aria-label={`Set ${setIndex + 1} ${timeBased ? 'seconds' : 'reps'}`}
+                        />
+                        <button
+                            type="button"
+                            className={`set-check ${set.done ? 'checked' : ''}`}
+                            onClick={() => toggleSetDone(exIndex, setIndex)}
+                            aria-label={`Mark set ${setIndex + 1} ${set.done ? 'incomplete' : 'complete'}`}
+                        >
+                            <Check size={14} strokeWidth={3} />
+                        </button>
                     </div>
-                )}
-                <div className="exercise-number">{i + 1}</div>
-                <div className="exercise-info">
-                    <div className={`exercise-name ${isDone ? 'exercise-name-done' : ''}`}>{ex.name}</div>
-                    <div className="exercise-detail">
-                        {ex.equipment !== 'None' ? ex.equipment : 'No equipment'} ·{' '}
-                        <span className={`type-badge ${ex.type.toLowerCase()}`}>{ex.type}</span>
-                    </div>
-                    {ex.description && (
-                        <div className="exercise-description" style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.4' }}>
-                            {ex.description}
+                ))}
+            </div>
+        );
+    };
+
+    const renderLoggedSummary = (exIndex) => {
+        // Mirrors commitWorkoutLogs — anything entered counts, ticked or not.
+        const sets = setsOf(exIndex).filter(s => s.weight !== '' || s.reps !== '');
+        if (sets.length === 0) return null;
+        const text = formatEntry({
+            unit,
+            sets: sets.map(s => ({
+                weight: s.weight === '' ? null : Number(s.weight),
+                reps: s.reps === '' ? null : Number(s.reps),
+            })),
+        });
+        return text ? <div className="logged-summary"><Check size={13} /> Logged {text}</div> : null;
+    };
+
+    const renderRow = (ex, i) => {
+        const done = isExerciseDone(i);
+        const open = expanded === i;
+        const last = getLastEntry(ex.name, workoutId, logs);
+        const lastText = last ? formatEntry(last) : null;
+
+        return (
+            <div key={i} className={`exercise-entry ${done ? 'exercise-done' : ''}`}>
+                <div
+                    className={`exercise-row animate-fade-in stagger-${Math.min(i + 1, 5)}`}
+                    onClick={() => interactive && setExpanded(open ? null : i)}
+                    style={{ cursor: interactive ? 'pointer' : 'default' }}
+                >
+                    {interactive && (
+                        <div className={`exercise-checkbox ${done ? 'checked' : ''}`}>
+                            {done && <Check size={14} strokeWidth={3} />}
                         </div>
                     )}
+                    <div className="exercise-number">{i + 1}</div>
+                    <div className="exercise-info">
+                        <div className={`exercise-name ${done ? 'exercise-name-done' : ''}`}>{ex.name}</div>
+                        <div className="exercise-detail">
+                            {ex.equipment !== 'None' ? ex.equipment : 'No equipment'} ·{' '}
+                            <span className={`type-badge ${ex.type.toLowerCase()}`}>{ex.type}</span>
+                        </div>
+                        {lastText && (
+                            <div className="last-time">
+                                <HistoryIcon size={12} /> Last: {lastText}
+                            </div>
+                        )}
+                        {!interactive && renderLoggedSummary(i)}
+                    </div>
+                    <div className="exercise-stats">
+                        <div className="exercise-sets">{ex.sets} × {ex.reps}</div>
+                        {ex.tempo !== '—' && (
+                            <div className="exercise-tempo">Tempo {ex.tempo}</div>
+                        )}
+                        {interactive && (
+                            <ChevronDown
+                                size={16}
+                                className={`exercise-chevron ${open ? 'open' : ''}`}
+                            />
+                        )}
+                    </div>
                 </div>
-                <div className="exercise-stats">
-                    <div className="exercise-sets">{ex.sets} × {ex.reps}</div>
-                    {ex.tempo !== '—' && (
-                        <div className="exercise-tempo">Tempo {ex.tempo}</div>
-                    )}
-                </div>
+
+                {interactive && open && renderSetLogger(ex, i)}
             </div>
         );
     };
@@ -144,8 +261,8 @@ export default function WorkoutCard({ workout, interactive = true }) {
                 </div>
             )}
 
-            {/* Progress Bar (only in interactive mode with at least one checked) */}
-            {interactive && completed.size > 0 && (
+            {/* Progress Bar */}
+            {interactive && completedCount > 0 && (
                 <div className="workout-progress">
                     <div className="workout-progress-bar">
                         <div
@@ -157,10 +274,14 @@ export default function WorkoutCard({ workout, interactive = true }) {
                         {allDone ? (
                             <><Trophy size={14} /> Workout Complete!</>
                         ) : (
-                            <>{completed.size}/{exercises.length} done</>
+                            <>{completedCount}/{exercises.length} done</>
                         )}
                     </span>
                 </div>
+            )}
+
+            {interactive && (
+                <p className="log-hint">Tap an exercise to log your weight and reps.</p>
             )}
 
             {/* Exercise List */}
