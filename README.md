@@ -16,10 +16,14 @@
 ## 🚀 Key Features
 
 - **Personalized Workout Builder**: A 5-step strategic flow (Location, Goal, Muscle Groups, Level, Duration) to generate the perfect session.
-- **60+ Exercise Database**: Hand-picked exercises from the Valor Training Method.
+- **200+ Exercise Database**: Hand-picked exercises from the Valor Training Method, each difficulty-rated so you're only shown movements suited to your level.
 - **Interactive Workout Card**: Real-time progress tracking with checkboxes and a celebration state.
 - **Smart Rest Timer**: Integrated countdown timer with haptic feedback, audio cues, and goal-based defaults.
+- **Set Logging**: Record weight and reps for every set, with last session's numbers shown inline so you know what to beat.
+- **Plate Calculator**: Enter a target weight and see exactly which plates to load on each side of the bar.
 - **Saved Preferences**: Remembers your settings for a frictionless experience.
+- **Works Offline**: The app shell is cached, so a dead signal in the gym basement — or a GitHub outage — won't stop your session.
+- **Backup & Restore**: Export your history and settings to a file, and pull them back in on a new device.
 - **Live Updates**: The app automatically fetches the latest code from GitHub, so you don't need to reinstall.
 - **Premium Dark Aesthetic**: A cinematic, high-contrast design optimized for gym environments.
 
