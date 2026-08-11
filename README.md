@@ -7,7 +7,7 @@
 
 ### [📥 Download the latest APK (v1.1.0)](https://github.com/nickincorvaia/valor-training-app/releases/latest/download/app-debug.apk)
 
-*Install this APK to get the new premium app icon and fix missing images!*
+*Install once — the app pulls the latest workouts and features on its own, so there's nothing to reinstall.*
 
 ---
 
